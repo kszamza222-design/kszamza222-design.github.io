@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>จิรเมธ สายะนันท์ (โอเล่) — Game Design Portfolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-deep:#0a1012;
+    --bg-panel:#0f1719;
+    --water-a:#0d3b3f;
+    --water-b:#1fb6c9;
+    --ember:#f2a35c;
+    --ember-dim:#c97f3f;
+    --mist:#cfe3e2;
+    --line:rgba(207,227,226,0.12);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg-deep);
+    color:var(--mist);
+    font-family:'Sarabun', sans-serif;
+    font-weight:300;
+    overflow-x:hidden;
+  }
+  h1,h2,h3,.display{
+    font-family:'Kanit', sans-serif;
+    font-weight:600;
+    letter-spacing:0.01em;
+  }
+
+  /* ---------- HERO / WATER CANVAS ---------- */
+  #hero{
+    position:relative;
+    width:100%;
+    height:100vh;
+    min-height:560px;
+    overflow:hidden;
+  }
+  #water-canvas{
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    display:block;
+    cursor:grab;
+  }
+  #water-canvas:active{ cursor:grabbing; }
+  .hero-overlay{
+    position:absolute;
+    left:6%;
+    bottom:10%;
+    z-index:2;
+    pointer-events:none;
+    text-shadow:0 4px 30px rgba(0,0,0,0.55);
+  }
+  .hero-overlay .eyebrow{
+    font-family:'Kanit', sans-serif;
+    font-size:0.85rem;
+    font-weight:500;
+    color:var(--ember);
+    margin-bottom:0.6rem;
+    letter-spacing:0.04em;
+  }
+  .hero-overlay h1{
+    font-size:clamp(2.4rem, 6vw, 4.6rem);
+    line-height:1.05;
+    color:#f4f8f7;
+  }
+  .hero-overlay .sub{
+    margin-top:1rem;
+    font-family:'Sarabun', sans-serif;
+    font-weight:400;
+    font-size:clamp(1rem, 1.6vw, 1.3rem);
+    color:var(--mist);
+    max-width:34ch;
+  }
+  .hero-hint{
+    position:absolute;
+    right:6%;
+    bottom:8%;
+    z-index:2;
+    font-size:0.85rem;
+    color:rgba(207,227,226,0.55);
+    display:flex;
+    align-items:center;
+    gap:0.5rem;
+  }
+  .hero-hint span.dot{
+    width:6px;height:6px;border-radius:50%;
+    background:var(--water-b);
+    box-shadow:0 0 10px var(--water-b);
+    display:inline-block;
+    animation:pulse 2.2s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{ transform:scale(1); opacity:0.7;}
+    50%{ transform:scale(1.6); opacity:1;}
+  }
+
+  /* ---------- NAV ---------- */
+  nav{
+    position:fixed; top:0; left:0; right:0;
+    z-index:50;
+    display:flex; justify-content:space-between; align-items:center;
+    padding:1.4rem 6%;
+    mix-blend-mode:difference;
+  }
+  nav .brand{
+    font-family:'Kanit'; font-weight:600; font-size:1rem; color:#fff;
+  }
+  nav ul{ list-style:none; display:flex; gap:2.2rem; }
+  nav a{ color:#fff; text-decoration:none; font-size:0.9rem; font-family:'Sarabun'; }
+
+  /* ---------- SECTION SHELL ---------- */
+  section{
+    padding:7rem 6%;
+    position:relative;
+    border-top:1px solid var(--line);
+  }
+  .section-head{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    margin-bottom:3rem; flex-wrap:wrap; gap:1rem;
+  }
+  .section-head h2{
+    font-size:clamp(1.7rem,3vw,2.4rem);
+    color:#f4f8f7;
+  }
+  .section-head .tag{
+    color:var(--ember);
+    font-family:'Kanit';
+    font-size:0.85rem;
+  }
+
+  /* ---------- ABOUT ---------- */
+  #about .grid{
+    display:grid;
+    grid-template-columns:1.1fr 1fr;
+    gap:4rem;
+    align-items:start;
+  }
+  #about p{
+    max-width:62ch;
+    line-height:1.9;
+    font-size:1.05rem;
+    color:#d9e8e6;
+    margin-bottom:1.2rem;
+  }
+  .facts{
+    display:flex; flex-direction:column; gap:1.4rem;
+    border-left:1px solid var(--line);
+    padding-left:2rem;
+  }
+  .facts .fact b{
+    display:block; font-family:'Kanit'; color:#f4f8f7; font-size:1rem; margin-bottom:0.2rem;
+  }
+  .facts .fact span{ font-size:0.92rem; color:rgba(207,227,226,0.75); }
+
+  /* ---------- SKILLS ---------- */
+  .skill-row{
+    display:flex; flex-wrap:wrap;
+    border-top:1px solid var(--line);
+  }
+  .skill-row:last-child{ border-bottom:1px solid var(--line); }
+  .skill-row .name{
+    width:280px; flex-shrink:0;
+    padding:1.4rem 0;
+    font-family:'Kanit'; font-size:1.05rem; color:#f4f8f7;
+  }
+  .skill-row .desc{
+    flex:1; min-width:240px;
+    padding:1.4rem 0;
+    color:rgba(207,227,226,0.75);
+    font-size:0.96rem;
+    line-height:1.7;
+  }
+
+  /* ---------- 3D MODEL VIEWER ---------- */
+  #model-section .viewer-wrap{
+    display:grid;
+    grid-template-columns:1.3fr 0.9fr;
+    gap:3rem;
+    align-items:center;
+  }
+  #model-canvas-holder{
+    position:relative;
+    width:100%;
+    aspect-ratio:4/3;
+    background:radial-gradient(ellipse at center, #142023 0%, #0a1012 75%);
+    border:1px solid var(--line);
+    border-radius:4px;
+    overflow:hidden;
+  }
+  #model-canvas-holder canvas{ display:block; width:100%; height:100%; cursor:grab; }
+  #model-canvas-holder canvas:active{ cursor:grabbing; }
+  #model-loading{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Kanit'; font-size:0.85rem; color:var(--ember);
+    letter-spacing:0.05em;
+    transition:opacity 0.5s ease;
+  }
+  .model-info p{
+    color:rgba(207,227,226,0.8);
+    line-height:1.8;
+    margin-bottom:1rem;
+  }
+  .model-info .src{
+    font-size:0.82rem;
+    color:rgba(207,227,226,0.5);
+    word-break:break-all;
+  }
+  .model-info .src a{ color:var(--water-b); }
+
+  /* ---------- VIDEO SHOWCASE ---------- */
+  .video-grid{
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    gap:2.4rem;
+  }
+  .video-card{
+    background:var(--bg-panel);
+    border:1px solid var(--line);
+    border-radius:4px;
+    overflow:hidden;
+  }
+  .video-card video{
+    width:100%; display:block; background:#000;
+    aspect-ratio:16/9;
+  }
+  .video-card .cap{
+    padding:1.2rem 1.4rem;
+  }
+  .video-card .cap h3{
+    font-size:1.05rem; color:#f4f8f7; margin-bottom:0.4rem;
+  }
+  .video-card .cap p{
+    font-size:0.9rem; color:rgba(207,227,226,0.7); line-height:1.6;
+  }
+
+  /* ---------- CONTACT / FOOTER ---------- */
+  footer{
+    padding:5rem 6% 3rem;
+    border-top:1px solid var(--line);
+    display:flex; justify-content:space-between; align-items:center;
+    flex-wrap:wrap; gap:1.5rem;
+  }
+  footer h2{ font-size:clamp(1.6rem,3vw,2.2rem); color:#f4f8f7; max-width:14ch; }
+  .contact-links{ display:flex; flex-direction:column; gap:0.5rem; align-items:flex-end; }
+  .contact-links a{ color:var(--mist); text-decoration:none; font-size:0.95rem; }
+  .contact-links a:hover{ color:var(--ember); }
+  .foot-note{ width:100%; margin-top:3rem; font-size:0.8rem; color:rgba(207,227,226,0.4); }
+
+  @media (max-width:860px){
+    #about .grid, #model-section .viewer-wrap{ grid-template-columns:1fr; }
+    .facts{ border-left:none; border-top:1px solid var(--line); padding-left:0; padding-top:1.5rem; }
+    .video-grid{ grid-template-columns:1fr; }
+    nav ul{ gap:1.2rem; }
+    nav ul li:nth-child(2){ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="brand">โอเล่ / จิรเมธ</div>
+  <ul>
+    <li><a href="#about">เกี่ยวกับ</a></li>
+    <li><a href="#skills">ความถนัด</a></li>
+    <li><a href="#model-section">3D Model</a></li>
+    <li><a href="#work">ผลงาน</a></li>
+    <li><a href="#contact">ติดต่อ</a></li>
+  </ul>
+</nav>
+
+<!-- ================= HERO / WATER ================= -->
+<section id="hero" style="padding:0; border-top:none;">
+  <canvas id="water-canvas"></canvas>
+  <div class="hero-overlay">
+    <div class="eyebrow">GAME DESIGNER / PROTOTYPER</div>
+    <h1>จิรเมธ สายะนันท์<br>(โอเล่)</h1>
+    <p class="sub">นักศึกษาปี 4 คณะสถาปัตยกรรมศาสตร์ สาขาเอกเกมและแอนิเมชั่น
+      สนใจเปลี่ยนไอเดียให้กลายเป็น Gameplay ที่เล่นได้จริง</p>
+  </div>
+  <div class="hero-hint"><span class="dot"></span> ลากเมาส์เพื่อหมุนกล้อง — ขยับเมาส์บนผิวน้ำเพื่อดูคลื่น</div>
+</section>
+
+<!-- ================= ABOUT ================= -->
+<section id="about">
+  <div class="section-head">
+    <h2>เกี่ยวกับผม</h2>
+    <span class="tag">ABOUT</span>
+  </div>
+  <div class="grid">
+    <div>
+      <p>ผมชื่อจิรเมธ สายะนันท์ ชื่อเล่นโอเล่ กำลังศึกษาอยู่ชั้นปีที่ 4 คณะสถาปัตยกรรมศาสตร์
+        สาขาเอกเกมและแอนิเมชั่น สิ่งที่ผมสนใจมากที่สุดคือการออกแบบ Game Design
+        และกระบวนการเปลี่ยนไอเดียในหัวให้กลายเป็น Gameplay ที่คนอื่นสามารถหยิบขึ้นมาทดลองเล่นได้จริง
+        ไม่ใช่แค่แนวคิดบนกระดาษ</p>
+      <p>ผมถนัดในการออกแบบ Gameplay, Game Mechanics และ Player Experience
+        โดยใช้ Unity เป็นเครื่องมือหลักในการสร้าง Prototype เพื่อทดสอบไอเดีย
+        เก็บ feedback แล้วนำมาปรับปรุงวนซ้ำจนกลไกของเกมสนุกและเข้าใจง่ายจริง ๆ</p>
+    </div>
+    <div class="facts">
+      <div class="fact"><b>สถานะ</b><span>นักศึกษาปี 4 คณะสถาปัตยกรรมศาสตร์</span></div>
+      <div class="fact"><b>สาขา</b><span>เกมและแอนิเมชั่น (Game and Animation)</span></div>
+      <div class="fact"><b>ความสนใจหลัก</b><span>Game Design, Gameplay Prototyping</span></div>
+      <div class="fact"><b>เครื่องมือหลัก</b><span>Unity, Prototyping Tools</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= SKILLS ================= -->
+<section id="skills">
+  <div class="section-head">
+    <h2>ความถนัด</h2>
+    <span class="tag">FOCUS</span>
+  </div>
+  <div>
+    <div class="skill-row">
+      <div class="name">Game Design</div>
+      <div class="desc">ออกแบบโครงสร้างของเกมตั้งแต่แนวคิด เป้าหมายของผู้เล่น ไปจนถึงระบบที่ทำให้เกมสนุกและมีความหมาย</div>
+    </div>
+    <div class="skill-row">
+      <div class="name">Game Mechanics</div>
+      <div class="desc">ออกแบบกลไกและกฎของเกมที่ทำงานร่วมกันอย่างเป็นระบบ เพื่อสร้างความท้าทายและ feedback loop ที่น่าติดตาม</div>
+    </div>
+    <div class="skill-row">
+      <div class="name">Player Experience</div>
+      <div class="desc">เข้าใจความรู้สึกและพฤติกรรมของผู้เล่น เพื่อออกแบบประสบการณ์ที่ลื่นไหลตั้งแต่เข้าเกมจนจบด่าน</div>
+    </div>
+    <div class="skill-row">
+      <div class="name">Prototyping ด้วย Unity</div>
+      <div class="desc">สร้าง Prototype อย่างรวดเร็วเพื่อทดลองไอเดีย เก็บผลตอบรับ แล้ววนซ้ำปรับปรุงจนกลไกเกมสมบูรณ์</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 3D MODEL VIEWER ================= -->
+<section id="model-section">
+  <div class="section-head">
+    <h2>ตัวอย่าง 3D Model (PBR)</h2>
+    <span class="tag">REAL-TIME RENDER</span>
+  </div>
+  <div class="viewer-wrap">
+    <div id="model-canvas-holder">
+      <div id="model-loading">กำลังโหลดโมเดล...</div>
+    </div>
+    <div class="model-info">
+      <p>ตัวอย่างการเรนเดอร์โมเดล 3 มิติแบบ Physically Based Rendering (PBR) แบบเรียลไทม์ด้วย three.js
+        แสดงพื้นผิว Albedo, Normal, Metalness และ Roughness ภายใต้แสงสภาพแวดล้อมจริง
+        ลากเมาส์บนโมเดลเพื่อหมุนดูรอบทิศทาง</p>
+      <p class="src">โมเดลตัวอย่าง: Damaged Helmet — Khronos Group glTF Sample Assets (public)<br>
+        <a href="https://github.com/KhronosGroup/glTF-Sample-Assets" target="_blank" rel="noopener">github.com/KhronosGroup/glTF-Sample-Assets</a></p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= VIDEO SHOWCASE ================= -->
+<section id="work">
+  <div class="section-head">
+    <h2>ตัวอย่างผลงาน Game Design</h2>
+    <span class="tag">GAMEPLAY DEMO</span>
+  </div>
+  <div class="video-grid">
+    <div class="video-card">
+      <video controls preload="metadata" poster="">
+        <source src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4" type="video/mp4">
+        เบราว์เซอร์ของคุณไม่รองรับการเล่นวิดีโอ
+      </video>
+      <div class="cap">
+        <h3>Gameplay Prototype — Demo 01</h3>
+        <p>วิดีโอตัวอย่างสำหรับแสดงผลงานต้นแบบเกม (แทนที่ไฟล์นี้ด้วยวิดีโอ Gameplay จริงของคุณ)</p>
+      </div>
+    </div>
+    <div class="video-card">
+      <video controls preload="metadata" poster="">
+        <source src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4" type="video/mp4">
+        เบราว์เซอร์ของคุณไม่รองรับการเล่นวิดีโอ
+      </video>
+      <div class="cap">
+        <h3>Gameplay Prototype — Demo 02</h3>
+        <p>วิดีโอตัวอย่างสำหรับแสดงผลงานต้นแบบเกม (แทนที่ไฟล์นี้ด้วยวิดีโอ Gameplay จริงของคุณ)</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FOOTER / CONTACT ================= -->
+<footer id="contact">
+  <h2>มาคุยกันเรื่องไอเดียเกมของคุณ</h2>
+  <div class="contact-links">
+    <a href="mailto:example@email.com">example@email.com</a>
+    <a href="#" target="_blank">LinkedIn</a>
+    <a href="#" target="_blank">Itch.io</a>
+  </div>
+  <div class="foot-note">© จิรเมธ สายะนันท์ (โอเล่) — Game Design Portfolio</div>
+</footer>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+
+/* =========================================================
+   1) HERO WATER SHADER SCENE
+   ========================================================= */
+(function initWaterHero(){
+  const canvas = document.getElementById('water-canvas');
+  const hero = document.getElementById('hero');
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:false });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x081012);
+  scene.fog = new THREE.FogExp2(0x081012, 0.045);
+
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+  camera.position.set(0, 2.6, 7);
+
+  const controls = new OrbitControls(camera, canvas);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.06;
+  controls.minDistance = 3;
+  controls.maxDistance = 14;
+  controls.maxPolarAngle = Math.PI * 0.49;
+  controls.target.set(0, 0, 0);
+
+  // Lights
+  scene.add(new THREE.HemisphereLight(0x8fd7dd, 0x0a1012, 0.9));
+  const key = new THREE.DirectionalLight(0xffcf9e, 1.2);
+  key.position.set(5, 8, 3);
+  scene.add(key);
+  const rim = new THREE.PointLight(0x2fb8c6, 2.5, 20);
+  rim.position.set(-4, 2, -4);
+  scene.add(rim);
+
+  // Mouse ripple uniforms
+  const mouseUniform = new THREE.Vector2(0.5, 0.5);
+  const mouseUniformPrev = new THREE.Vector2(0.5, 0.5);
+  let mouseActive = 0.0;
+
+  const waterGeo = new THREE.PlaneGeometry(40, 40, 220, 220);
+  const waterMat = new THREE.ShaderMaterial({
+    uniforms:{
+      uTime:{ value:0 },
+      uMouse:{ value: new THREE.Vector2(0.5,0.5) },
+      uMouseActive:{ value: 0 },
+      uColorDeep:{ value: new THREE.Color(0x06282b) },
+      uColorShallow:{ value: new THREE.Color(0x2fb8c6) },
+      uColorFoam:{ value: new THREE.Color(0xf2e9d8) },
+      uLightDir:{ value: new THREE.Vector3(0.4, 0.8, 0.3).normalize() }
+    },
+    vertexShader:`
+      uniform float uTime;
+      uniform vec2 uMouse;
+      uniform float uMouseActive;
+      varying vec3 vNormal;
+      varying vec3 vPos;
+      varying float vHeight;
+
+      // simple hash / noise
+      float hash(vec2 p){ return fract(sin(dot(p, vec2(41.3, 289.1))) * 43758.5453); }
+      float noise(vec2 p){
+        vec2 i = floor(p); vec2 f = fract(p);
+        float a = hash(i), b = hash(i+vec2(1.0,0.0));
+        float c = hash(i+vec2(0.0,1.0)), d = hash(i+vec2(1.0,1.0));
+        vec2 u = f*f*(3.0-2.0*f);
+        return mix(a,b,u.x) + (c-a)*u.y*(1.0-u.x) + (d-b)*u.x*u.y;
+      }
+
+      void main(){
+        vec3 pos = position;
+        vec2 uv2 = uv * 6.0;
+
+        float wave = 0.0;
+        wave += sin(pos.x * 0.6 + uTime * 0.8) * 0.10;
+        wave += sin(pos.y * 0.9 - uTime * 0.6) * 0.08;
+        wave += noise(uv2 + uTime * 0.05) * 0.12;
+
+        // mouse ripple: convert uMouse (0..1 uv) into world-plane space
+        vec2 mouseWorld = (uMouse - 0.5) * 40.0;
+        float d = distance(pos.xy, mouseWorld);
+        float ripple = sin(d * 2.2 - uTime * 4.0) * exp(-d * 0.35) * 0.9 * uMouseActive;
+
+        float h = wave + ripple;
+        pos.z += h;
+        vHeight = h;
+
+        // approximate normal via neighboring offsets
+        float eps = 0.6;
+        float hx = sin((pos.x+eps) * 0.6 + uTime * 0.8) * 0.10
+                 + sin(pos.y * 0.9 - uTime * 0.6) * 0.08;
+        float hy = sin(pos.x * 0.6 + uTime * 0.8) * 0.10
+                 + sin((pos.y+eps) * 0.9 - uTime * 0.6) * 0.08;
+        vec3 tangentX = normalize(vec3(eps, 0.0, hx - h));
+        vec3 tangentY = normalize(vec3(0.0, eps, hy - h));
+        vNormal = normalize(cross(tangentX, tangentY));
+
+        vPos = pos;
+        vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+        gl_Position = projectionMatrix * mvPosition;
+      }
+    `,
+    fragmentShader:`
+      uniform vec3 uColorDeep;
+      uniform vec3 uColorShallow;
+      uniform vec3 uColorFoam;
+      uniform vec3 uLightDir;
+      varying vec3 vNormal;
+      varying vec3 vPos;
+      varying float vHeight;
+
+      void main(){
+        vec3 N = normalize(vNormal);
+        float diff = clamp(dot(N, normalize(uLightDir)), 0.0, 1.0);
+
+        float fres = pow(1.0 - clamp(dot(N, vec3(0.0,0.0,1.0)), 0.0, 1.0), 2.5);
+
+        vec3 base = mix(uColorDeep, uColorShallow, clamp(vHeight * 2.5 + 0.4, 0.0, 1.0));
+        vec3 col = base * (0.45 + diff * 0.75);
+        col += fres * 0.35;
+
+        float foam = smoothstep(0.28, 0.5, vHeight);
+        col = mix(col, uColorFoam, foam * 0.6);
+
+        gl_FragColor = vec4(col, 1.0);
+      }
+    `,
+    side: THREE.DoubleSide
+  });
+
+  const water = new THREE.Mesh(waterGeo, waterMat);
+  water.rotation.x = -Math.PI / 2.15;
+  water.position.y = -0.6;
+  scene.add(water);
+
+  // raycaster to find mouse position on water plane
+  const raycaster = new THREE.Raycaster();
+  const ndc = new THREE.Vector2();
+  const planeForRay = new THREE.Plane(new THREE.Vector3(0,1,0), 0.6);
+  const hitPoint = new THREE.Vector3();
+
+  function onPointerMove(e){
+    const rect = canvas.getBoundingClientRect();
+    ndc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    ndc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(ndc, camera);
+    if(raycaster.ray.intersectPlane(planeForRay, hitPoint)){
+      const uvx = (hitPoint.x / 40.0) + 0.5;
+      const uvy = (hitPoint.z / 40.0) + 0.5;
+      mouseUniform.set(uvx, uvy);
+      mouseActive = 1.0;
+    }
+  }
+  canvas.addEventListener('pointermove', onPointerMove);
+  canvas.addEventListener('pointerleave', ()=>{ mouseActive = 0.3; });
+
+  function resize(){
+    const w = hero.clientWidth, h = hero.clientHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  const clock = new THREE.Clock();
+  function animate(){
+    requestAnimationFrame(animate);
+    const t = clock.getElapsedTime();
+    waterMat.uniforms.uTime.value = t;
+    mouseUniformPrev.lerp(mouseUniform, 0.15);
+    waterMat.uniforms.uMouse.value.copy(mouseUniformPrev);
+    waterMat.uniforms.uMouseActive.value += (mouseActive - waterMat.uniforms.uMouseActive.value) * 0.05;
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  animate();
+})();
+
+/* =========================================================
+   2) PBR MODEL VIEWER (Khronos Damaged Helmet — public glTF)
+   ========================================================= */
+(function initModelViewer(){
+  const holder = document.getElementById('model-canvas-holder');
+  const loadingEl = document.getElementById('model-loading');
+
+  const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.1;
+  holder.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+  camera.position.set(0, 0, 3.2);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.minDistance = 1.6;
+  controls.maxDistance = 6;
+  controls.autoRotate = true;
+  controls.autoRotateSpeed = 1.1;
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+  const keyLight = new THREE.DirectionalLight(0xfff2df, 2.2);
+  keyLight.position.set(3, 4, 5);
+  scene.add(keyLight);
+  const fillLight = new THREE.DirectionalLight(0x8fd7ff, 0.8);
+  fillLight.position.set(-4, -1, -3);
+  scene.add(fillLight);
+
+  // Environment for realistic PBR reflections (public HDRI)
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  new RGBELoader()
+    .setPath('https://threejs.org/examples/textures/equirectangular/')
+    .load('venice_sunset_1k.hdr', (hdr)=>{
+      const envMap = pmrem.fromEquirectangular(hdr).texture;
+      scene.environment = envMap;
+      hdr.dispose();
+      pmrem.dispose();
+    });
+
+  const loader = new GLTFLoader();
+  loader.load(
+    'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb',
+    (gltf)=>{
+      const model = gltf.scene;
+      model.rotation.y = Math.PI;
+      scene.add(model);
+      loadingEl.style.opacity = '0';
+      setTimeout(()=> loadingEl.style.display='none', 500);
+    },
+    undefined,
+    (err)=>{
+      loadingEl.textContent = 'ไม่สามารถโหลดโมเดลได้ (ตรวจสอบการเชื่อมต่ออินเทอร์เน็ต)';
+      console.error(err);
+    }
+  );
+
+  function resize(){
+    const w = holder.clientWidth, h = holder.clientHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function animate(){
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  animate();
+})();
+</script>
+</body>
+</html>
