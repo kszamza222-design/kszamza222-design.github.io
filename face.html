@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Face Tracking - New Hat and Glasses</title>
+  <title>Face Tracking - Mafia Style</title>
 
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-face-aframe.prod.js"></script>
@@ -37,43 +37,126 @@
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false">
 
-    <a-assets timeout="30000">
+    <a-assets></a-assets>
 
-      <!-- หมวกโมเดลใหม่ -->
-      <a-asset-item
-        id="newHat"
-        src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/hat2/scene.gltf">
-      </a-asset-item>
-
-      <!-- แว่นโมเดลใหม่ -->
-      <a-asset-item
-        id="newGlasses"
-        src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/glasses2/scene.gltf">
-      </a-asset-item>
-
-    </a-assets>
-
-    <!-- หมวก: คงตำแหน่งและขนาดเดิม -->
+    <!-- ================================== -->
+    <!-- หมวก Fedora สีดำทรงมาเฟีย -->
+    <!-- ================================== -->
     <a-entity mindar-face-target="anchorIndex: 10">
-      <a-gltf-model
-        src="#newHat"
+
+      <!-- ปีกหมวก -->
+      <a-cylinder
         position="0 0.65 -0.5"
-        rotation="0 0 0"
-        scale="0.2 0.2 0.2">
-      </a-gltf-model>
+        radius="0.52"
+        height="0.035"
+        color="#111111"
+        material="roughness: 0.85">
+      </a-cylinder>
+
+      <!-- ตัวหมวก -->
+      <a-cylinder
+        position="0 0.82 -0.5"
+        radius="0.31"
+        height="0.30"
+        color="#080808"
+        material="roughness: 0.8">
+      </a-cylinder>
+
+      <!-- ส่วนบนของหมวก -->
+      <a-cylinder
+        position="0 0.98 -0.5"
+        radius="0.31"
+        height="0.025"
+        color="#080808"
+        material="roughness: 0.8">
+      </a-cylinder>
+
+      <!-- แถบคาดหมวกสีแดงเข้ม -->
+      <a-cylinder
+        position="0 0.70 -0.5"
+        radius="0.315"
+        height="0.045"
+        color="#581515"
+        material="roughness: 0.55">
+      </a-cylinder>
+
     </a-entity>
 
-    <!-- แว่น: คงตำแหน่งและขนาดเดิม -->
+    <!-- ================================== -->
+    <!-- แว่นกันแดดทรงเหลี่ยมสีดำ -->
+    <!-- ================================== -->
     <a-entity mindar-face-target="anchorIndex: 168">
-      <a-gltf-model
-        src="#newGlasses"
-        position="0 0 -0.1"
-        rotation="0 0 0"
-        scale="0.009 0.009 0.009">
-      </a-gltf-model>
+
+      <!-- กรอบแว่นซ้าย -->
+      <a-box
+        position="-0.16 0 -0.1"
+        width="0.16"
+        height="0.095"
+        depth="0.035"
+        color="#080808"
+        material="roughness: 0.3">
+      </a-box>
+
+      <!-- เลนส์ซ้าย -->
+      <a-box
+        position="-0.16 0 -0.078"
+        width="0.125"
+        height="0.065"
+        depth="0.012"
+        color="#20252b"
+        material="metalness: 0.3; roughness: 0.2">
+      </a-box>
+
+      <!-- กรอบแว่นขวา -->
+      <a-box
+        position="0.16 0 -0.1"
+        width="0.16"
+        height="0.095"
+        depth="0.035"
+        color="#080808"
+        material="roughness: 0.3">
+      </a-box>
+
+      <!-- เลนส์ขวา -->
+      <a-box
+        position="0.16 0 -0.078"
+        width="0.125"
+        height="0.065"
+        depth="0.012"
+        color="#20252b"
+        material="metalness: 0.3; roughness: 0.2">
+      </a-box>
+
+      <!-- สะพานแว่น -->
+      <a-box
+        position="0 0.005 -0.08"
+        width="0.08"
+        height="0.025"
+        depth="0.025"
+        color="#111111">
+      </a-box>
+
+      <!-- ขาแว่นซ้าย -->
+      <a-box
+        position="-0.255 0.005 -0.015"
+        width="0.11"
+        height="0.018"
+        depth="0.018"
+        color="#111111">
+      </a-box>
+
+      <!-- ขาแว่นขวา -->
+      <a-box
+        position="0.255 0.005 -0.015"
+        width="0.11"
+        height="0.018"
+        depth="0.018"
+        color="#111111">
+      </a-box>
+
     </a-entity>
 
-    <!-- ใช้กล้องของ MindAR เพื่อให้เห็นหน้าจริง -->
+    <!-- กล้องสำหรับ MindAR Face Tracking -->
     <a-camera
       active="false"
       position="0 0 0"
