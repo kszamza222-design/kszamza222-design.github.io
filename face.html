@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mafia Cigar Face Tracking</title>
+  <title>Face Tracking - New Hat and Glasses</title>
 
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-face-aframe.prod.js"></script>
@@ -12,10 +12,11 @@
   <style>
     html, body {
       margin: 0;
+      padding: 0;
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: transparent;
+      background: #000;
     }
 
     a-scene {
@@ -32,100 +33,47 @@
     mindar-face
     embedded
     color-space="sRGB"
-    renderer="colorManagement: true; physicallyCorrectLights: true; alpha: true"
+    renderer="colorManagement: true; physicallyCorrectLights: true"
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false">
 
     <a-assets timeout="30000">
-      <!-- หมวก Fedora -->
+
+      <!-- หมวกโมเดลใหม่ -->
       <a-asset-item
-        id="hatModel"
-        src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/hat/scene.gltf">
+        id="newHat"
+        src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/hat2/scene.gltf">
       </a-asset-item>
+
+      <!-- แว่นโมเดลใหม่ -->
+      <a-asset-item
+        id="newGlasses"
+        src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/glasses2/scene.gltf">
+      </a-asset-item>
+
     </a-assets>
 
-    <!-- หมวกมาเฟีย ติดตามหน้าผาก -->
+    <!-- หมวก: คงตำแหน่งและขนาดเดิม -->
     <a-entity mindar-face-target="anchorIndex: 10">
       <a-gltf-model
-        src="#hatModel"
+        src="#newHat"
         position="0 0.65 -0.5"
         rotation="0 0 0"
         scale="0.2 0.2 0.2">
       </a-gltf-model>
     </a-entity>
 
-    <!-- ซิการ์สีน้ำตาล ติดตามบริเวณปาก -->
-    <a-entity
-      mindar-face-target="anchorIndex: 1"
-      position="0 0 0">
-
-      <a-entity
-        position="0 -0.02 -0.1"
-        rotation="0 0 90"
-        scale="0.12 0.12 0.12">
-
-        <!-- ตัวซิการ์ -->
-        <a-cylinder
-          position="0 0 0"
-          radius="0.075"
-          height="0.85"
-          color="#70401f"
-          material="roughness: 0.85">
-        </a-cylinder>
-
-        <!-- ปลายซิการ์ที่ติดไฟ -->
-        <a-cylinder
-          position="0 0.43 0"
-          radius="0.076"
-          height="0.07"
-          color="#d05b28"
-          material="emissive: #6b1c08; emissiveIntensity: 0.6">
-        </a-cylinder>
-
-        <!-- แถบคาดซิการ์ -->
-        <a-cylinder
-          position="0 0.15 0"
-          radius="0.077"
-          height="0.045"
-          color="#d4b16c">
-        </a-cylinder>
-
-      </a-entity>
-
-      <!-- ควันสีเทาโปร่งแสง ลอยขึ้นจากปลายซิการ์ -->
-      <a-entity position="-0.04 0.04 -0.12">
-
-        <a-sphere
-          position="0 0 0"
-          radius="0.012"
-          color="#d8d8d8"
-          material="transparent: true; opacity: 0.45; depthWrite: false"
-          animation="property: position; from: 0 0 0; to: -0.025 0.12 0; dur: 1400; loop: true; easing: easeOutSine"
-          animation__fade="property: material.opacity; from: 0.45; to: 0.02; dur: 1400; loop: true">
-        </a-sphere>
-
-        <a-sphere
-          position="0.01 0.035 0"
-          radius="0.016"
-          color="#c5c5c5"
-          material="transparent: true; opacity: 0.3; depthWrite: false"
-          animation="property: position; from: 0.01 0.035 0; to: 0.035 0.19 0; dur: 1900; loop: true; delay: 500; easing: easeOutSine"
-          animation__fade="property: material.opacity; from: 0.3; to: 0.01; dur: 1900; loop: true; delay: 500">
-        </a-sphere>
-
-        <a-sphere
-          position="-0.01 0.02 0"
-          radius="0.009"
-          color="#eeeeee"
-          material="transparent: true; opacity: 0.35; depthWrite: false"
-          animation="property: position; from: -0.01 0.02 0; to: -0.05 0.16 0; dur: 1700; loop: true; delay: 900; easing: easeOutSine"
-          animation__fade="property: material.opacity; from: 0.35; to: 0.01; dur: 1700; loop: true; delay: 900">
-        </a-sphere>
-
-      </a-entity>
+    <!-- แว่น: คงตำแหน่งและขนาดเดิม -->
+    <a-entity mindar-face-target="anchorIndex: 168">
+      <a-gltf-model
+        src="#newGlasses"
+        position="0 0 -0.1"
+        rotation="0 0 0"
+        scale="0.009 0.009 0.009">
+      </a-gltf-model>
     </a-entity>
 
-    <!-- กล้องของ MindAR: ไม่แสดงกล้องเสมือนทับภาพกล้องจริง -->
+    <!-- ใช้กล้องของ MindAR เพื่อให้เห็นหน้าจริง -->
     <a-camera
       active="false"
       position="0 0 0"
