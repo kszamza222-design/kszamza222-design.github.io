@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>NeoBot Face Tracking</title>
+  <script type="importmap">
+    {"imports":{
+      "three":"https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/",
+      "mindar-face-three":"https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-face-three.prod.js"
+    }}
+  </script>
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#111827;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+    #container{position:fixed;inset:0;width:100%;height:100%;overflow:hidden;background:#111827}
+    /* ใช้วิดีโอที่ MindAR เปิดเองโดยตรง จะได้ตรงกับพิกัดที่ tracker ใช้ */
+    #container video{position:absolute!important;inset:0!important;z-index:0!important;display:block!important;width:100%!important;height:100%!important;object-fit:cover!important;object-position:center!important;transform:scaleX(-1);pointer-events:none}
+    #container canvas{position:absolute!important;inset:0!important;z-index:1!important;display:block!important;width:100%!important;height:100%!important;background:transparent!important;transform:scaleX(-1);pointer-events:none}
+    #start{position:absolute;z-index:5;top:50%;left:50%;transform:translate(-50%,-50%);border:0;border-radius:999px;padding:14px 22px;background:#16b8b0;color:#062d35;font-size:16px;font-weight:750;cursor:pointer;box-shadow:0 8px 30px #0005}
+    #start[hidden]{display:none}
+    #status{position:absolute;z-index:6;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom));padding:10px 12px;border-radius:12px;color:#fff;background:rgba(10,18,32,.72);border:1px solid rgba(255,255,255,.15);font-size:13px;text-align:center;pointer-events:none}
+  </style>
+</head>
+<body>
+  <div id="container">
+    <button id="start">เริ่มใช้งานกล้อง</button>
+    <div id="status">กดเริ่มใช้งานกล้อง แล้วอนุญาตให้เว็บใช้กล้อง</div>
+  </div>
+  <script type="module">
+    import * as THREE from 'three';
+    import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+    import {MindARThree} from 'mindar-face-three';
+
+    const container=document.querySelector('#container');
+    const startButton=document.querySelector('#start');
+    const statusBox=document.querySelector('#status');
+    let mindar=null, raf=0, started=false;
+    const meshes=[], named=Object.create(null), smooth=Object.create(null);
+    const clamp=(v,min=0,max=1)=>Math.max(min,Math.min(max,Number.isFinite(v)?v:0));
+    const lerp=(a,b,t)=>a+(b-a)*t;
+    const score=(scores,name)=>scores[name]||0;
+    const status=message=>statusBox.textContent=message;
+
+    function cacheBase(object){
+      if(!object.userData.basePos)object.userData.basePos=object.position.clone();
+      if(!object.userData.baseScale)object.userData.baseScale=object.scale.clone();
+      if(object.userData.baseRotationZ===undefined)object.userData.baseRotationZ=object.rotation.z;
+    }
+    function part(name,index=0){return named[name]?.[index]||null}
+
+    function updateFace(raw){
+      for(const key of new Set([...Object.keys(smooth),...Object.keys(raw)])) smooth[key]=lerp(smooth[key]||0,raw[key]||0,.32);
+      const s=smooth;
+      // Apply any morph targets whose names match the face-tracker categories.
+      for(const mesh of meshes){
+        for(const [name,index] of Object.entries(mesh.morphTargetDictionary||{})){
+          if(['browInnerUp','jawOpen','eyeBlinkLeft','eyeBlinkRight'].includes(name))continue;
+          if(Object.prototype.hasOwnProperty.call(s,name))mesh.morphTargetInfluences[index]=s[name];
+        }
+      }
+      // Eyebrows: the GLB has one browInnerUp target on each brow.
+      for(const [name,outerName,downName] of [['Brow_Left','browOuterUpLeft','browDownLeft'],['Brow_Right','browOuterUpRight','browDownRight']]){
+        const brow=part(name); if(!brow)continue; cacheBase(brow);
+        const amount=clamp(score(s,'browInnerUp')*.65+score(s,outerName)*.9-score(s,downName)*.65,-.4,1);
+        brow.position.y=brow.userData.basePos.y+amount*.075;
+        brow.rotation.z=brow.userData.baseRotationZ+(name==='Brow_Left'?-1:1)*amount*.07;
+        const targetIndex=brow.morphTargetDictionary?.browInnerUp;
+        if(targetIndex!==undefined)brow.morphTargetInfluences[targetIndex]=amount;
+      }
+      // Eye look scores from ARKit/Mediapipe. Move pupils and highlights together.
+      for(const side of ['Left','Right']){
+        const isLeft=side==='Left';
+        const up=score(s,isLeft?'eyeLookUpLeft':'eyeLookUpRight');
+        const down=score(s,isLeft?'eyeLookDownLeft':'eyeLookDownRight');
+        const inward=score(s,isLeft?'eyeLookInLeft':'eyeLookInRight');
+        const outward=score(s,isLeft?'eyeLookOutLeft':'eyeLookOutRight');
+        const dx=(isLeft?inward-outward:outward-inward);
+        const dy=up-down;
+        const blink=score(s,isLeft?'eyeBlinkLeft':'eyeBlinkRight');
+        const pupil=part('Pupil_'+side);
+        if(pupil){cacheBase(pupil);pupil.position.x=pupil.userData.basePos.x+clamp(dx,-1,1)*.105;pupil.position.y=pupil.userData.basePos.y+clamp(dy,-1,1)*.10;pupil.scale.y=pupil.userData.baseScale.y*(1-blink*.8);}
+        const glint=part('Eye_Glint',isLeft?0:1);
+        if(glint){cacheBase(glint);glint.position.x=glint.userData.basePos.x+clamp(dx,-1,1)*.09;glint.position.y=glint.userData.basePos.y+clamp(dy,-1,1)*.085;glint.scale.y=glint.userData.baseScale.y*(1-blink*.8);}
+        const eye=part('EyeWhite_'+side);
+        if(eye){cacheBase(eye);const wide=score(s,isLeft?'eyeWideLeft':'eyeWideRight');eye.scale.y=eye.userData.baseScale.y*(1+wide*.12);const blinkIndex=eye.morphTargetDictionary?.[isLeft?'eyeBlinkLeft':'eyeBlinkRight'];if(blinkIndex!==undefined)eye.morphTargetInfluences[blinkIndex]=blink;}
+      }
+      // Jaw opening and smiling are animated even on this simple model without extra targets.
+      const jaw=clamp(score(s,'jawOpen'));
+      const smile=clamp((score(s,'mouthSmileLeft')+score(s,'mouthSmileRight'))*.5);
+      const frown=clamp((score(s,'mouthFrownLeft')+score(s,'mouthFrownRight'))*.5);
+      const mouth=part('Mouth_Navy');
+      if(mouth){cacheBase(mouth);mouth.scale.x=mouth.userData.baseScale.x*(1+smile*.30);mouth.scale.y=mouth.userData.baseScale.y*(1+jaw*1.35-smile*.12);mouth.position.y=mouth.userData.basePos.y-jaw*.055+smile*.025-frown*.025;mouth.rotation.z=(score(s,'mouthSmileLeft')-score(s,'mouthSmileRight'))*.08;}
+      const tongue=part('Tongue_Coral');
+      if(tongue){cacheBase(tongue);tongue.scale.y=tongue.userData.baseScale.y*(1+jaw*1.2);tongue.position.y=tongue.userData.basePos.y-jaw*.025+smile*.01;}
+      for(const cheek of named['Cheek_Coral']||[]){cacheBase(cheek);cheek.position.y=cheek.userData.basePos.y+smile*.045-frown*.02;}
+      const nose=part('Nose_Coral');
+      if(nose){cacheBase(nose);nose.position.y=nose.userData.basePos.y+score(s,'noseSneerLeft')*.012;}
+    }
+
+    async function startTracking(){
+      if(started)return;started=true;startButton.hidden=true;status('กำลังเปิดกล้องและโหลดโมเดล…');
+      try{
+        mindar=new MindARThree({container,maxTrack:1,filterMinCF:.0001,filterBeta:.01});
+        const {renderer,scene,camera}=mindar;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+        renderer.setSize(container.clientWidth,container.clientHeight);
+        renderer.setClearColor(0x000000,0);
+        renderer.domElement.style.background='transparent';
+        // Keep MindAR's own camera video visible; do not hide it or clone its stream.
+        scene.add(new THREE.HemisphereLight(0xffffff,0xbbbbff,1.6));
+        const key=new THREE.DirectionalLight(0xffffff,1.2);key.position.set(0,1.5,3);scene.add(key);
+        status('กำลังโหลด my_face.glb…');
+        const gltf=await new GLTFLoader().loadAsync('./my_face.glb');
+        const model=gltf.scene;
+        // Landmark 168 is near the nose bridge. The old anchor index 1 pins the whole head to a side landmark.
+        const anchor=mindar.addAnchor(168);
+        model.scale.setScalar(.42);
+        model.position.set(0,-.12,0);
+        anchor.group.add(model);
+        model.traverse(o=>{
+          if(!o.isMesh)return;
+          (named[o.name] ||= []).push(o);
+          if(o.morphTargetDictionary&&o.morphTargetInfluences)meshes.push(o);
+          const materials=Array.isArray(o.material)?o.material:[o.material];
+          for(const m of materials){if(m){m.transparent=false;m.needsUpdate=true;}}
+        });
+        await mindar.start();
+        // Explicitly style the video element created by MindAR, so the real camera remains visible behind the transparent canvas.
+        const video=mindar.video||container.querySelector('video');
+        if(video){video.style.cssText+=';position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;opacity:1;z-index:0;transform:scaleX(-1);';}
+        renderer.domElement.style.zIndex='1';
+        status('กำลังติดตามใบหน้า — ขยับตา ยิ้ม อ้าปาก และยักคิ้วได้เลย');
+        const animate=()=>{
+          raf=requestAnimationFrame(animate);
+          const categories=mindar.getLatestEstimate()?.blendshapes?.categories||[];
+          const raw=Object.create(null);
+          for(const item of categories)raw[item.categoryName]=item.score;
+          if(categories.length)updateFace(raw);
+          renderer.render(scene,camera);
+        };
+        animate();
+        window.addEventListener('resize',()=>{if(mindar)renderer.setSize(container.clientWidth,container.clientHeight);});
+      }catch(err){
+        console.error(err);status('เปิดไม่สำเร็จ: '+(err?.message||err)+' — ตรวจสอบสิทธิ์กล้องและไฟล์ my_face.glb');
+        try{mindar?.stop();}catch(_){}
+        startButton.hidden=false;started=false;
+      }
+    }
+    startButton.addEventListener('click',startTracking);
+    window.addEventListener('beforeunload',()=>{if(raf)cancelAnimationFrame(raf);try{mindar?.stop();}catch(_){}});
+  </script>
+</body>
+</html>
