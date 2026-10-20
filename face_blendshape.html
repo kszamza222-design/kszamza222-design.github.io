@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>NeoBot Face Tracking</title>
+  <script type="importmap">
+    {"imports":{
+      "three":"https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/",
+      "mindar-face-three":"https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-face-three.prod.js"
+    }}
+  </script>
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#101827;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+    /* MindAR's camera can be created outside #container. Style the actual video globally. */
+    video{position:fixed!important;inset:0!important;display:block!important;width:100%!important;height:100%!important;object-fit:cover!important;object-position:center!important;opacity:1!important;z-index:0!important;transform:none!important;pointer-events:none!important;background:transparent!important}
+    #container{position:fixed;inset:0;width:100%;height:100%;overflow:hidden;background:transparent;z-index:1}
+    /* Do not mirror the canvas independently of the tracker/video: doing so moved the mask to the other side of the face. */
+    #container canvas{position:absolute!important;inset:0!important;display:block!important;width:100%!important;height:100%!important;background:transparent!important;transform:none!important;pointer-events:none}
+    #start{position:absolute;z-index:5;top:50%;left:50%;transform:translate(-50%,-50%);border:0;border-radius:999px;padding:14px 22px;background:#f11d91;color:#fff;font-size:16px;font-weight:750;cursor:pointer;box-shadow:0 8px 30px #0005}
+    #start[hidden]{display:none}
+    #status{position:absolute;z-index:6;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom));padding:10px 12px;border-radius:12px;color:#fff;background:rgba(10,18,32,.76);border:1px solid rgba(255,255,255,.18);font-size:13px;text-align:center;pointer-events:none}
+  </style>
+</head>
+<body>
+  <div id="container">
+    <button id="start">เริ่มใช้งานกล้อง</button>
+    <div id="status">กดเริ่มใช้งานกล้อง แล้วอนุญาตให้เว็บใช้กล้อง</div>
+  </div>
+  <script type="module">
+    import * as THREE from 'three';
+    import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+    import {MindARThree} from 'mindar-face-three';
+
+    const container=document.querySelector('#container');
+    const startButton=document.querySelector('#start');
+    const statusBox=document.querySelector('#status');
+    let mindar=null, raf=0, started=false, model=null, renderer=null;
+    const trackedMeshes=[];
+    const smooth=Object.create(null);
+    const baseState=new WeakMap();
+    const clamp=(v,min=0,max=1)=>Math.max(min,Math.min(max,Number.isFinite(v)?v:0));
+    const lerp=(a,b,t)=>a+(b-a)*t;
+    const score=(scores,name)=>scores[name]||0;
+    const status=message=>statusBox.textContent=message;
+
+    function cacheBase(object){
+      if(!object||baseState.has(object))return;
+      baseState.set(object,{position:object.position.clone(),scale:object.scale.clone(),rotation:object.rotation.clone()});
+    }
+    function part(name){
+      const object=model?.getObjectByName(name)||null;
+      if(object)cacheBase(object);
+      return object;
+    }
+    function base(object){return baseState.get(object)}
+
+    function updateFace(raw){
+      for(const key of new Set([...Object.keys(smooth),...Object.keys(raw)]))
+        smooth[key]=lerp(smooth[key]||0,raw[key]||0,.30);
+      const s=smooth;
+
+      // Eyebrows lift/tilt using the tracker-provided brow blendshapes.
+      for(const [name,outerName,downName,dir] of [
+        ['Brow_Left','browOuterUpLeft','browDownLeft',-1],
+        ['Brow_Right','browOuterUpRight','browDownRight',1]
+      ]){
+        const brow=part(name); if(!brow)continue;
+        const b=base(brow);
+        const inner=score(s,'browInnerUp');
+        const lift=clamp(inner*.55+score(s,outerName)*.85-score(s,downName)*.70,-.5,1);
+        brow.position.y=b.position.y+lift*.115;
+        brow.rotation.z=b.rotation.z+dir*lift*.075;
+      }
+
+      // Move both pupils and their highlights. If eyeLook categories are emitted by MindAR,
+      // gaze moves independently from the head pose (the anchor already handles head turns).
+      for(const side of ['Left','Right']){
+        const isLeft=side==='Left';
+        const up=score(s,isLeft?'eyeLookUpLeft':'eyeLookUpRight');
+        const down=score(s,isLeft?'eyeLookDownLeft':'eyeLookDownRight');
+        const inward=score(s,isLeft?'eyeLookInLeft':'eyeLookInRight');
+        const outward=score(s,isLeft?'eyeLookOutLeft':'eyeLookOutRight');
+        const dx=isLeft?(inward-outward):(outward-inward);
+        const dy=up-down;
+        const blink=score(s,isLeft?'eyeBlinkLeft':'eyeBlinkRight');
+
+        const pupil=part('Pupil_'+side);
+        const glint=part('Eye_Glint_'+side);
+        const panel=part('EyePanel_'+side);
+        for(const object of [pupil,glint]){
+          if(!object)continue;
+          const b=base(object);
+          object.position.x=b.position.x+clamp(dx,-1,1)*.105;
+          object.position.y=b.position.y+clamp(dy,-1,1)*.09;
+          object.scale.y=b.scale.y*(1-blink*.96);
+        }
+        if(panel){const b=base(panel);panel.scale.y=b.scale.y*(1-blink*.48);}
+      }
+
+      // Expression: jaw opens the cavity and separates the two teeth bars; smile widens/raises them.
+      const jaw=clamp(score(s,'jawOpen'));
+      const smile=clamp((score(s,'mouthSmileLeft')+score(s,'mouthSmileRight'))*.5);
+      const frown=clamp((score(s,'mouthFrownLeft')+score(s,'mouthFrownRight'))*.5);
+      const cavity=part('Mouth_Cavity');
+      if(cavity){
+        const b=base(cavity);
+        cavity.scale.x=b.scale.x*(.88+smile*.28);
+        cavity.scale.y=b.scale.y*(.25+jaw*1.25+frown*.25);
+        cavity.position.y=b.position.y-jaw*.025-frown*.015;
+      }
+      const upper=part('Mouth_Upper');
+      if(upper){const b=base(upper);upper.scale.x=b.scale.x*(1+smile*.28);upper.position.y=b.position.y+smile*.025+jaw*.035;}
+      const lower=part('Mouth_Lower');
+      if(lower){const b=base(lower);lower.scale.x=b.scale.x*(1+smile*.25);lower.position.y=b.position.y-jaw*.145+smile*.012;}
+      for(const name of ['Cheek_Left','Cheek_Right']){
+        const cheek=part(name);if(!cheek)continue;
+        const b=base(cheek);const puff=score(s,'cheekPuff');
+        cheek.scale.x=b.scale.x*(1+smile*.10+puff*.22);
+        cheek.scale.y=b.scale.y*(1+smile*.12+puff*.18);
+      }
+    }
+
+    async function startTracking(){
+      if(started)return;
+      started=true;startButton.hidden=true;status('กำลังเปิดกล้องและโหลดโมเดล 3D…');
+      try{
+        mindar=new MindARThree({container,maxTrack:1,filterMinCF:.0001,filterBeta:.01});
+        const {renderer:arRenderer,scene,camera}=mindar;
+        renderer=arRenderer;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+        renderer.setClearColor(0x000000,0);
+        renderer.setClearAlpha(0);
+        renderer.domElement.style.background='transparent';
+        renderer.domElement.style.transform='none';
+        scene.add(new THREE.HemisphereLight(0xffffff,0xbbbbff,1.55));
+        const key=new THREE.DirectionalLight(0xffffff,1.35);key.position.set(-1,2,3);scene.add(key);
+        const fill=new THREE.DirectionalLight(0xffffff,.55);fill.position.set(2,.5,1);scene.add(fill);
+
+        status('กำลังโหลด my_face.glb…');
+        const gltf=await new GLTFLoader().loadAsync('./my_face.glb');
+        model=gltf.scene;
+        // GLB dimensions are designed as a full face mask. Scale is intentionally larger than
+        // the previous 0.42 value; the screenshot showed the old mask at roughly half-size.
+        model.scale.setScalar(1.08);
+        // Landmark 1 is the nose tip; use it for a full-face mask instead of the glasses-style bridge anchor.
+        model.position.set(0,0,0.015);
+        model.traverse(object=>{
+          if(!object.isMesh)return;
+          trackedMeshes.push(object);
+          cacheBase(object);
+          const materials=Array.isArray(object.material)?object.material:[object.material];
+          for(const material of materials){if(material){material.transparent=false;material.needsUpdate=true;}}
+        });
+        mindar.addAnchor(1).group.add(model);
+
+        await mindar.start();
+        // Force the preview and the overlay into the same unmirrored coordinate system. MindAR
+        // may mount the video outside #container, so query the whole document.
+        const video=mindar.video||document.querySelector('video');
+        if(video){
+          video.style.position='fixed';video.style.inset='0';video.style.width='100%';video.style.height='100%';
+          video.style.objectFit='cover';video.style.objectPosition='center';video.style.display='block';
+          video.style.opacity='1';video.style.zIndex='0';video.style.transform='none';video.style.pointerEvents='none';
+        }
+        renderer.domElement.style.zIndex='1';
+        renderer.domElement.style.transform='none';
+        status('กำลังติดตามใบหน้า — ขยับศีรษะ มองซ้าย/ขวา ยิ้ม อ้าปาก และยักคิ้วได้เลย');
+        const animate=()=>{
+          raf=requestAnimationFrame(animate);
+          const categories=mindar.getLatestEstimate()?.blendshapes?.categories||[];
+          if(categories.length){
+            const raw=Object.create(null);
+            for(const item of categories)raw[item.categoryName]=item.score;
+            updateFace(raw);
+          }
+          renderer.render(scene,camera);
+        };
+        animate();
+      }catch(err){
+        console.error(err);
+        status('เปิดไม่สำเร็จ: '+(err?.message||err)+' — ตรวจสอบสิทธิ์กล้องและการอัปโหลดไฟล์ my_face.glb');
+        try{mindar?.stop();}catch(_){}
+        startButton.hidden=false;started=false;
+      }
+    }
+    startButton.addEventListener('click',startTracking);
+    window.addEventListener('beforeunload',()=>{if(raf)cancelAnimationFrame(raf);try{mindar?.stop();}catch(_){}});
+  </script>
+</body>
+</html>
