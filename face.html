@@ -11,8 +11,7 @@
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-face-aframe.prod.js"></script>
 
   <style>
-    html,
-    body {
+    html, body {
       margin: 0;
       padding: 0;
       width: 100%;
@@ -22,8 +21,6 @@
     }
 
     a-scene {
-      position: fixed;
-      inset: 0;
       width: 100%;
       height: 100%;
     }
@@ -40,98 +37,54 @@
     device-orientation-permission-ui="enabled: false">
 
     <a-assets timeout="30000">
+      <a-asset-item
+        id="headModel"
+        src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/sparkar/headOccluder.glb">
+      </a-asset-item>
+
+      <a-asset-item
+        id="glassesModel"
+        src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/glasses/scene.gltf">
+      </a-asset-item>
+
+      <a-asset-item
+        id="hatModel"
+        src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/hat/scene.gltf">
+      </a-asset-item>
     </a-assets>
 
-    <!-- หมวก: เพิ่มขนาดจาก 0.2 เป็น 0.4 -->
-    <a-entity
-      mindar-face-target="anchorIndex: 10"
-      position="0 0.65 -0.5"
-      scale="0.4 0.4 0.4">
-
-      <!-- ปีกหมวก -->
-      <a-cylinder
-        position="0 0.05 0"
-        radius="0.48"
-        height="0.035"
-        color="#171717"
-        material="roughness: 0.8">
-      </a-cylinder>
-
-      <!-- ส่วนบนของหมวก -->
-      <a-cylinder
-        position="0 0.19 0"
-        radius="0.31"
-        height="0.27"
-        color="#242424"
-        material="roughness: 0.8">
-      </a-cylinder>
-
-      <!-- ขอบหมวกด้านบน -->
-      <a-cylinder
-        position="0 0.33 0"
-        radius="0.31"
-        height="0.025"
-        color="#111111">
-      </a-cylinder>
-
+    <!-- โมเดลบังส่วนด้านหลังของใบหน้า -->
+    <a-entity mindar-face-target="anchorIndex: 168">
+      <a-gltf-model
+        mindar-face-occluder
+        src="#headModel"
+        position="0 -0.3 0.15"
+        rotation="0 0 0"
+        scale="0.065 0.065 0.065">
+      </a-gltf-model>
     </a-entity>
 
-    <!-- แว่น: ลดขนาดจาก 0.2 เหลือ 0.1 -->
-    <a-entity
-      mindar-face-target="anchorIndex: 168"
-      position="0 0 -0.1"
-      scale="0.1 0.1 0.1">
-
-      <!-- เลนส์แว่นซ้าย -->
-      <a-box
-        position="-0.42 0 0"
-        width="0.75"
-        height="0.48"
-        depth="0.07"
-        color="#111111"
-        material="roughness: 0.25">
-      </a-box>
-
-      <!-- เลนส์แว่นขวา -->
-      <a-box
-        position="0.42 0 0"
-        width="0.75"
-        height="0.48"
-        depth="0.07"
-        color="#111111"
-        material="roughness: 0.25">
-      </a-box>
-
-      <!-- สะพานแว่น -->
-      <a-box
-        position="0 0.03 0"
-        width="0.18"
-        height="0.07"
-        depth="0.07"
-        color="#111111">
-      </a-box>
-
-      <!-- ขาแว่นซ้าย -->
-      <a-box
-        position="-0.81 0.02 -0.02"
-        width="0.35"
-        height="0.055"
-        depth="0.055"
-        color="#111111">
-      </a-box>
-
-      <!-- ขาแว่นขวา -->
-      <a-box
-        position="0.81 0.02 -0.02"
-        width="0.35"
-        height="0.055"
-        depth="0.055"
-        color="#111111">
-      </a-box>
-
+    <!-- หมวก: เพิ่มขนาดเป็น 2 เท่า -->
+    <a-entity mindar-face-target="anchorIndex: 10">
+      <a-gltf-model
+        src="#hatModel"
+        position="0 0.65 -0.5"
+        rotation="0 0 0"
+        scale="0.4 0.4 0.4">
+      </a-gltf-model>
     </a-entity>
 
-    <!-- กล้องสำหรับ Face Tracking -->
+    <!-- แว่น: ลดขนาดลงครึ่งหนึ่ง -->
+    <a-entity mindar-face-target="anchorIndex: 168">
+      <a-gltf-model
+        src="#glassesModel"
+        position="0 0 -0.1"
+        rotation="0 0 0"
+        scale="0.0045 0.0045 0.0045">
+      </a-gltf-model>
+    </a-entity>
+
+    <!-- กล้อง -->
     <a-camera
       active="false"
       position="0 0 0"
