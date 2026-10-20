@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Face Tracking - Mafia Style</title>
+  <title>Face Tracking - Mafia Filter</title>
 
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-face-aframe.prod.js"></script>
@@ -16,12 +16,9 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: #000;
     }
 
     a-scene {
-      position: fixed;
-      inset: 0;
       width: 100%;
       height: 100%;
     }
@@ -37,126 +34,106 @@
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false">
 
-    <a-assets></a-assets>
+    <a-assets timeout="30000"></a-assets>
 
-    <!-- ================================== -->
-    <!-- หมวก Fedora สีดำทรงมาเฟีย -->
-    <!-- ================================== -->
-    <a-entity mindar-face-target="anchorIndex: 10">
+    <!-- หมวก Fedora สีดำ -->
+    <a-entity
+      mindar-face-target="anchorIndex: 10"
+      position="0 0.65 -0.5"
+      scale="0.2 0.2 0.2">
 
       <!-- ปีกหมวก -->
       <a-cylinder
-        position="0 0.65 -0.5"
-        radius="0.52"
-        height="0.035"
+        position="0 0 0"
+        radius="0.48"
+        height="0.045"
         color="#111111"
         material="roughness: 0.85">
       </a-cylinder>
 
       <!-- ตัวหมวก -->
       <a-cylinder
-        position="0 0.82 -0.5"
-        radius="0.31"
-        height="0.30"
+        position="0 0.22 0"
+        radius="0.29"
+        height="0.38"
         color="#080808"
         material="roughness: 0.8">
       </a-cylinder>
 
-      <!-- ส่วนบนของหมวก -->
+      <!-- ด้านบนหมวก -->
       <a-cylinder
-        position="0 0.98 -0.5"
-        radius="0.31"
+        position="0 0.42 0"
+        radius="0.29"
         height="0.025"
-        color="#080808"
-        material="roughness: 0.8">
+        color="#080808">
       </a-cylinder>
 
-      <!-- แถบคาดหมวกสีแดงเข้ม -->
+      <!-- แถบคาดสีแดงเข้ม -->
       <a-cylinder
-        position="0 0.70 -0.5"
-        radius="0.315"
-        height="0.045"
-        color="#581515"
-        material="roughness: 0.55">
+        position="0 0.055 0"
+        radius="0.295"
+        height="0.055"
+        color="#541515">
       </a-cylinder>
 
     </a-entity>
 
-    <!-- ================================== -->
-    <!-- แว่นกันแดดทรงเหลี่ยมสีดำ -->
-    <!-- ================================== -->
-    <a-entity mindar-face-target="anchorIndex: 168">
+    <!-- แว่นกันแดดทรงเหลี่ยม -->
+    <a-entity
+      mindar-face-target="anchorIndex: 168"
+      position="0 0 -0.1"
+      scale="0.2 0.2 0.2">
 
-      <!-- กรอบแว่นซ้าย -->
+      <!-- กรอบซ้าย -->
       <a-box
-        position="-0.16 0 -0.1"
-        width="0.16"
-        height="0.095"
-        depth="0.035"
-        color="#080808"
-        material="roughness: 0.3">
+        position="-0.42 0 0"
+        width="0.75"
+        height="0.42"
+        depth="0.12"
+        color="#080808">
       </a-box>
 
       <!-- เลนส์ซ้าย -->
       <a-box
-        position="-0.16 0 -0.078"
-        width="0.125"
-        height="0.065"
-        depth="0.012"
-        color="#20252b"
-        material="metalness: 0.3; roughness: 0.2">
+        position="-0.42 0.015 0.07"
+        width="0.60"
+        height="0.29"
+        depth="0.025"
+        color="#252a30"
+        material="metalness: 0.25; roughness: 0.2">
       </a-box>
 
-      <!-- กรอบแว่นขวา -->
+      <!-- กรอบขวา -->
       <a-box
-        position="0.16 0 -0.1"
-        width="0.16"
-        height="0.095"
-        depth="0.035"
-        color="#080808"
-        material="roughness: 0.3">
+        position="0.42 0 0"
+        width="0.75"
+        height="0.42"
+        depth="0.12"
+        color="#080808">
       </a-box>
 
       <!-- เลนส์ขวา -->
       <a-box
-        position="0.16 0 -0.078"
-        width="0.125"
-        height="0.065"
-        depth="0.012"
-        color="#20252b"
-        material="metalness: 0.3; roughness: 0.2">
+        position="0.42 0.015 0.07"
+        width="0.60"
+        height="0.29"
+        depth="0.025"
+        color="#252a30"
+        material="metalness: 0.25; roughness: 0.2">
       </a-box>
 
       <!-- สะพานแว่น -->
       <a-box
-        position="0 0.005 -0.08"
-        width="0.08"
-        height="0.025"
-        depth="0.025"
-        color="#111111">
-      </a-box>
-
-      <!-- ขาแว่นซ้าย -->
-      <a-box
-        position="-0.255 0.005 -0.015"
-        width="0.11"
-        height="0.018"
-        depth="0.018"
-        color="#111111">
-      </a-box>
-
-      <!-- ขาแว่นขวา -->
-      <a-box
-        position="0.255 0.005 -0.015"
-        width="0.11"
-        height="0.018"
-        depth="0.018"
-        color="#111111">
+        position="0 0.04 0.02"
+        width="0.22"
+        height="0.09"
+        depth="0.10"
+        color="#080808">
       </a-box>
 
     </a-entity>
 
-    <!-- กล้องสำหรับ MindAR Face Tracking -->
+    <!-- กล้องของ MindAR -->
     <a-camera
       active="false"
       position="0 0 0"
