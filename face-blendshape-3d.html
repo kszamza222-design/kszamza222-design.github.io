@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3D Face Blendshape Tracking</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0a1020;color:#eef3ff;font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}main{max-width:1120px;margin:auto;padding:22px 16px 42px}h1{font-size:clamp(26px,4vw,38px);margin:0 0 6px}p{color:#aab8d1;margin:6px 0}.tag{font-size:12px;color:#72f0ce;border:1px solid #315d58;border-radius:999px;padding:4px 10px;display:inline-block;margin-bottom:12px}.layout{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(280px,.75fr);gap:16px;margin-top:18px}.panel{min-width:0;background:#151e32;border:1px solid #2a3854;border-radius:16px;padding:16px}.viewport{height:clamp(330px,55vw,580px);position:relative;background:#080d18;border-radius:12px;overflow:hidden}video{position:absolute;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);opacity:.62}#three{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.camera-label{position:absolute;left:10px;bottom:10px;background:#07101cce;border:1px solid #35435d;border-radius:8px;padding:7px 10px;font-size:13px}.buttons{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}button{border:0;border-radius:10px;padding:11px 15px;background:#72f0ce;color:#08221c;font-weight:750;cursor:pointer}button.alt{background:#2b3853;color:#f1f5ff}button:disabled{opacity:.55;cursor:not-allowed}.status{font-size:14px;color:#72f0ce;min-height:22px}.metric{margin:13px 0}.metric-head{display:flex;justify-content:space-between;font-size:14px}.metric-head span:last-child{color:#72f0ce;font-variant-numeric:tabular-nums}.track{height:8px;background:#293650;border-radius:99px;overflow:hidden;margin-top:5px}.bar{height:100%;width:0;background:linear-gradient(90deg,#6689ff,#72f0ce);transition:width .08s}.small{font-size:13px}.checks{padding-left:18px;color:#c5d0e5}.checks li{margin:7px 0}.warn{color:#ffd28a}.footer{margin-top:15px;font-size:13px}@media(max-width:780px){.layout{grid-template-columns:1fr}main{padding:16px 12px 30px}}
+</style>
+</head>
+<body><main>
+<div class="tag">THREE.JS + MEDIAPIPE · WEB PROTOTYPE</div>
+<h1>3D Face Blendshape Tracking</h1>
+<p>หัวการ์ตูน 3D ตัวอย่างที่ติดตามตำแหน่งใบหน้าและแสดงสีหน้าตามกล้อง</p>
+<div class="layout">
+<section class="panel">
+<h2>Live Camera + 3D Avatar</h2>
+<div class="viewport"><video id="video" playsinline muted></video><canvas id="three"></canvas><div class="camera-label" id="faceState">ยังไม่ได้เริ่มกล้อง</div></div>
+<div class="buttons"><button id="start">เริ่มกล้อง</button><button id="stop" class="alt" disabled>ปิดกล้อง</button></div>
+<div id="status" class="status">กดเริ่มกล้อง แล้วอนุญาตให้เว็บไซต์ใช้กล้อง</div>
+<p class="small">โมเดล 3D นี้สร้างจากรูปทรงพื้นฐานเพื่อทดลองระบบ ยังไม่ใช่โมเดล production-ready</p>
+</section>
+<section class="panel">
+<h2>Blendshape Tracking</h2><p class="small">ค่าประมาณ 0.00–1.00 ที่ตรวจจับได้จากใบหน้า</p><div id="metrics"></div>
+<h3>วิธีทดสอบ</h3><ol class="checks"><li>หันหน้าเข้ากล้องให้เห็นใบหน้าชัดเจน</li><li>กระพริบตาและอ้าปาก</li><li>ยิ้ม แล้วลองกดมุมปาก</li><li>หันหน้าไปซ้าย–ขวาและเอียงศีรษะ</li></ol>
+<p class="small warn">การซ้อนทับ 3D เป็นตัวอย่างเบื้องต้น อาจยังไม่แนบกับใบหน้าได้พอดีทุกมุม</p>
+</section></div>
+<p class="footer">ใช้บน HTTPS เช่น GitHub Pages · ต้องมีอินเทอร์เน็ตเพื่อโหลดไลบรารีและโมเดลตรวจจับจาก CDN</p>
+</main>
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+import {FaceLandmarker,FilesetResolver} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+const $=s=>document.querySelector(s),video=$("#video"),canvas=$("#three");
+const scene=new THREE.Scene();
+const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.outputColorSpace=THREE.SRGBColorSpace;
+const camera=new THREE.PerspectiveCamera(32,1,.1,100);camera.position.set(0,0,8);
+scene.add(new THREE.HemisphereLight(0xc9f8ff,0x18334c,2.0));
+const keyLight=new THREE.DirectionalLight(0xffffff,2.6);keyLight.position.set(-3,5,7);scene.add(keyLight);
+const fillLight=new THREE.DirectionalLight(0x59d9ee,1.2);fillLight.position.set(4,0,4);scene.add(fillLight);
+const avatar=new THREE.Group();scene.add(avatar);
+const cyan=new THREE.MeshStandardMaterial({color:0x48c4d0,roughness:.38,metalness:.08});
+const dark=new THREE.MeshStandardMaterial({color:0x151c2e,roughness:.32});
+const white=new THREE.MeshStandardMaterial({color:0xf3f4fa,roughness:.28});
+const irisMat=new THREE.MeshStandardMaterial({color:0x101827,roughness:.25});
+const lipMat=new THREE.MeshStandardMaterial({color:0xff8d6b,roughness:.3});
+const face=new THREE.Mesh(new THREE.SphereGeometry(1,64,48),cyan);face.scale.set(1.34,1.48,.62);avatar.add(face);
+function ellipsoid(parent,mat,pos,scale){const m=new THREE.Mesh(new THREE.SphereGeometry(1,32,24),mat);m.position.set(...pos);m.scale.set(...scale);parent.add(m);return m}
+const browL=ellipsoid(avatar,dark,[-.58,.48,.57],[.43,.12,.09]);browL.rotation.z=.12;
+const browR=ellipsoid(avatar,dark,[.58,.48,.57],[.43,.12,.09]);browR.rotation.z=-.12;
+const eyes=[];
+for(const x of [-.55,.55]){
+ const eyeGroup=new THREE.Group();eyeGroup.position.set(x,.08,.59);avatar.add(eyeGroup);
+ const eyeWhite=ellipsoid(eyeGroup,white,[0,0,0],[.39,.20,.07]);
+ const pupil=ellipsoid(eyeGroup,irisMat,[0,0,.075],[.105,.15,.045]);
+ const top=ellipsoid(eyeGroup,white,[0,.17,.07],[.42,.045,.04]);
+ const bottom=ellipsoid(eyeGroup,white,[0,-.17,.07],[.42,.045,.04]);
+ eyes.push({eyeGroup,eyeWhite,pupil,top,bottom});
+}
+ellipsoid(avatar,cyan,[0,-.12,.59],[.105,.26,.08]);
+const noseTip=ellipsoid(avatar,lipMat,[0,-.23,.65],[.08,.045,.04]);
+const mouthGroup=new THREE.Group();mouthGroup.position.set(0,-.55,.62);avatar.add(mouthGroup);
+const upperLip=ellipsoid(mouthGroup,lipMat,[0,.045,0],[.38,.075,.09]);
+const lowerLip=ellipsoid(mouthGroup,lipMat,[0,-.045,0],[.38,.075,.09]);
+const mouthInside=ellipsoid(mouthGroup,new THREE.MeshStandardMaterial({color:0x4d1827,roughness:.7}),[0,0,-.015],[.31,.015,.035]);
+const cheeks=[];
+for(const x of [-.88,.88])cheeks.push(ellipsoid(avatar,new THREE.MeshStandardMaterial({color:0xf07884,transparent:true,opacity:.2}),[x,-.28,.48],[.18,.09,.025]));
+let landmarker=null,stream=null,raf=0,lastVideoTime=-1;
+const defs=[["eyeBlink","กระพริบตา"],["mouthOpen","อ้าปาก"],["smile","ยิ้ม"],["frown","กดมุมปาก"],["eyes","มองซ้าย–ขวา"]];
+const bars={};for(const [id,label] of defs){const d=document.createElement("div");d.className="metric";d.innerHTML=`<div class="metric-head"><span>${id} <small style="color:#aab8d1">· ${label}</small></span><span id="v-${id}">0.00</span></div><div class="track"><div class="bar" id="b-${id}"></div></div>`;$("#metrics").append(d);bars[id]=[d.querySelector(`#v-${id}`),d.querySelector(`#b-${id}`)]}
+const clamp=x=>Math.max(0,Math.min(1,x||0)),avg=a=>a.reduce((s,x)=>s+x,0)/a.length;
+function resize(){const r=canvas.getBoundingClientRect();renderer.setSize(Math.max(1,r.width),Math.max(1,r.height),false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix()}
+function updateFace(cats,landmarks){
+ const g=n=>cats[n]||0,blink=Math.max(g("eyeBlinkLeft"),g("eyeBlinkRight")),open=g("jawOpen"),smile=avg([g("mouthSmileLeft"),g("mouthSmileRight")]),frown=avg([g("mouthFrownLeft"),g("mouthFrownRight")]),eyes=Math.max(g("eyeLookInLeft"),g("eyeLookOutLeft"),g("eyeLookInRight"),g("eyeLookOutRight"));
+ const vals={eyeBlink:blink,mouthOpen:open,smile,frown,eyes};for(const [id] of defs){let v=clamp(vals[id]);bars[id][0].textContent=v.toFixed(2);bars[id][1].style.width=(v*100)+"%"}
+ // Use face landmarks to estimate head center, scale and yaw/pitch. This is an approximate 2D overlay mapping.
+ if(landmarks&&landmarks.length){
+  const lm=landmarks[0],left=lm[234],right=lm[454],forehead=lm[10],chin=lm[152],nose=lm[1];
+  const cx=(left.x+right.x)/2,cy=(forehead.y+chin.y)/2,fw=Math.hypot(right.x-left.x,right.y-left.y),fh=Math.hypot(chin.x-forehead.x,chin.y-forehead.y);
+  // mirror camera feed; Three scene coordinates use mirrored x to match it
+  avatar.position.set((.5-cx)*4.3,(.5-cy)*3.15,0);
+  const desiredW=Math.max(.65,Math.min(2.9,fw*5.0));avatar.scale.set(desiredW/2.9,Math.max(.65,Math.min(2.9,fh*3.0))/2.9,1);
+  const yaw=(nose.x-cx)*2.4;avatar.rotation.y=THREE.MathUtils.clamp(yaw,-.55,.55);
+  avatar.rotation.z=THREE.MathUtils.clamp((right.y-left.y)*2.2,-.35,.35);
+  avatar.rotation.x=THREE.MathUtils.clamp((nose.y-cy)*.55,-.25,.25);
+ }
+ // Face expression deformations
+ for(const e of eyes){e.eyeWhite.scale.y=.20*Math.max(.08,1-blink*.94);e.pupil.scale.y=.15*Math.max(.08,1-blink*.94);e.top.position.y=.17-.08*blink;e.bottom.position.y=-.17+.08*blink;}
+ upperLip.position.y=.045+smile*.025;lowerLip.position.y=-.045-smile*.025;
+ upperLip.scale.x=.38+smile*.12;lowerLip.scale.x=.38+smile*.12;
+ mouthInside.scale.y=.015+open*.20;mouthInside.scale.x=.31+open*.02;
+ mouthInside.position.y=-open*.02;
+ mouthGroup.position.y=-.55-frown*.04;
+ browL.position.y=.48+frown*.1;browR.position.y=.48+frown*.1;
+ browL.rotation.z=.12+frown*.18;browR.rotation.z=-.12-frown*.18;
+ cheeks.forEach(c=>{c.material.opacity=.12+smile*.38;c.scale.set(.18+smile*.05,.09+smile*.04,.025)});
+ $("#faceState").textContent=smile>.5?"ยิ้ม":frown>.45?"กดมุมปาก":open>.45?"อ้าปาก":blink>.65?"กระพริบตา":"ตรวจพบใบหน้า";
+}
+function render(){renderer.render(scene,camera);raf=requestAnimationFrame(render)}
+async function loop(){if(!stream||!landmarker)return;if(video.currentTime!==lastVideoTime&&video.readyState>=2){lastVideoTime=video.currentTime;const r=landmarker.detectForVideo(video,performance.now());if(r.faceBlendshapes?.length)updateFace(Object.fromEntries(r.faceBlendshapes[0].categories.map(x=>[x.categoryName,x.score])),r.faceLandmarks);else $("#faceState").textContent="ไม่พบใบหน้า — มองเข้ากล้อง"}raf=requestAnimationFrame(loop)}
+async function start(){$("#start").disabled=true;$("#status").textContent="กำลังโหลดโมเดลตรวจจับใบหน้า…";try{const vision=await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");landmarker=await FaceLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",delegate:"GPU"},runningMode:"VIDEO",numFaces:1,outputFaceBlendshapes:true,outputFacialTransformationMatrixes:true});stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:640},height:{ideal:480}},audio:false});video.srcObject=stream;await video.play();$("#stop").disabled=false;$("#status").textContent="กล้องทำงานแล้ว — ลองขยับสีหน้า";lastVideoTime=-1;loop()}catch(e){console.error(e);$("#status").textContent="เปิดกล้องไม่สำเร็จ: "+e.message+" — ตรวจสิทธิ์กล้องและอินเทอร์เน็ต";$("#start").disabled=false;if(stream)stream.getTracks().forEach(t=>t.stop());stream=null}}
+function stop(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;if(raf)cancelAnimationFrame(raf);video.srcObject=null;$("#stop").disabled=true;$("#start").disabled=false;$("#status").textContent="ปิดกล้องแล้ว";$("#faceState").textContent="ยังไม่ได้เริ่มกล้อง"}
+$("#start").addEventListener("click",start);$("#stop").addEventListener("click",stop);window.addEventListener("resize",resize);window.addEventListener("beforeunload",stop);resize();render();
+</script></body></html>
