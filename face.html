@@ -4,8 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <title>Face Tracking - Hat and Glasses</title>
+  <title>Face Tracking - Mafia Filter</title>
 
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-face-aframe.prod.js"></script>
@@ -17,7 +16,6 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: #000;
     }
 
     a-scene {
@@ -36,55 +34,106 @@
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false">
 
-    <a-assets timeout="30000">
-      <a-asset-item
-        id="headModel"
-        src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/sparkar/headOccluder.glb">
-      </a-asset-item>
+    <a-assets timeout="30000"></a-assets>
 
-      <a-asset-item
-        id="glassesModel"
-        src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/glasses/scene.gltf">
-      </a-asset-item>
+    <!-- หมวก Fedora สีดำ -->
+    <a-entity
+      mindar-face-target="anchorIndex: 10"
+      position="0 0.65 -0.5"
+      scale="0.2 0.2 0.2">
 
-      <a-asset-item
-        id="hatModel"
-        src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/face-tracking/assets/hat/scene.gltf">
-      </a-asset-item>
-    </a-assets>
+      <!-- ปีกหมวก -->
+      <a-cylinder
+        position="0 0 0"
+        radius="0.48"
+        height="0.045"
+        color="#111111"
+        material="roughness: 0.85">
+      </a-cylinder>
 
-    <!-- โมเดลบังส่วนด้านหลังของใบหน้า -->
-    <a-entity mindar-face-target="anchorIndex: 168">
-      <a-gltf-model
-        mindar-face-occluder
-        src="#headModel"
-        position="0 -0.3 0.15"
-        rotation="0 0 0"
-        scale="0.065 0.065 0.065">
-      </a-gltf-model>
+      <!-- ตัวหมวก -->
+      <a-cylinder
+        position="0 0.22 0"
+        radius="0.29"
+        height="0.38"
+        color="#080808"
+        material="roughness: 0.8">
+      </a-cylinder>
+
+      <!-- ด้านบนหมวก -->
+      <a-cylinder
+        position="0 0.42 0"
+        radius="0.29"
+        height="0.025"
+        color="#080808">
+      </a-cylinder>
+
+      <!-- แถบคาดสีแดงเข้ม -->
+      <a-cylinder
+        position="0 0.055 0"
+        radius="0.295"
+        height="0.055"
+        color="#541515">
+      </a-cylinder>
+
     </a-entity>
 
-    <!-- หมวก: เพิ่มขนาดเป็น 2 เท่า -->
-    <a-entity mindar-face-target="anchorIndex: 10">
-      <a-gltf-model
-        src="#hatModel"
-        position="0 0.65 -0.5"
-        rotation="0 0 0"
-        scale="0.4 0.4 0.4">
-      </a-gltf-model>
+    <!-- แว่นกันแดดทรงเหลี่ยม -->
+    <a-entity
+      mindar-face-target="anchorIndex: 168"
+      position="0 0 -0.1"
+      scale="0.2 0.2 0.2">
+
+      <!-- กรอบซ้าย -->
+      <a-box
+        position="-0.42 0 0"
+        width="0.75"
+        height="0.42"
+        depth="0.12"
+        color="#080808">
+      </a-box>
+
+      <!-- เลนส์ซ้าย -->
+      <a-box
+        position="-0.42 0.015 0.07"
+        width="0.60"
+        height="0.29"
+        depth="0.025"
+        color="#252a30"
+        material="metalness: 0.25; roughness: 0.2">
+      </a-box>
+
+      <!-- กรอบขวา -->
+      <a-box
+        position="0.42 0 0"
+        width="0.75"
+        height="0.42"
+        depth="0.12"
+        color="#080808">
+      </a-box>
+
+      <!-- เลนส์ขวา -->
+      <a-box
+        position="0.42 0.015 0.07"
+        width="0.60"
+        height="0.29"
+        depth="0.025"
+        color="#252a30"
+        material="metalness: 0.25; roughness: 0.2">
+      </a-box>
+
+      <!-- สะพานแว่น -->
+      <a-box
+        position="0 0.04 0.02"
+        width="0.22"
+        height="0.09"
+        depth="0.10"
+        color="#080808">
+      </a-box>
+
     </a-entity>
 
-    <!-- แว่น: ลดขนาดลงครึ่งหนึ่ง -->
-    <a-entity mindar-face-target="anchorIndex: 168">
-      <a-gltf-model
-        src="#glassesModel"
-        position="0 0 -0.1"
-        rotation="0 0 0"
-        scale="0.0045 0.0045 0.0045">
-      </a-gltf-model>
-    </a-entity>
-
-    <!-- กล้อง -->
+    <!-- กล้องของ MindAR -->
     <a-camera
       active="false"
       position="0 0 0"
