@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sukuna Face Markings - MindAR</title>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <style>
+    html, body { margin:0; width:100%; height:100%; overflow:hidden; background:#080608; font-family:Arial,sans-serif; }
+    #container { position:fixed; inset:0; width:100%; height:100%; overflow:hidden; }
+    #status {
+      position:fixed; left:50%; bottom:24px; transform:translateX(-50%); z-index:9999;
+      max-width:calc(100% - 32px); padding:10px 16px; color:white;
+      background:rgba(0,0,0,.72); border:1px solid #b32636; border-radius:24px;
+      font-size:14px; text-align:center;
+    }
+    #title { position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:9999;
+      color:#f3f3f3; font-size:16px; font-weight:bold; letter-spacing:2px; }
+  </style>
+</head>
+<body>
+  <div id="container"></div>
+  <div id="title">SUKUNA MARKINGS</div>
+  <div id="status">กำลังเตรียมเปิดกล้อง...</div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { MindARThree } from 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-face-three.prod.js';
+
+    const container = document.querySelector('#container');
+    const status = document.querySelector('#status');
+
+    let mindarThree;
+
+    async function start() {
+      try {
+        status.textContent = 'กำลังโหลดลายสัก...';
+
+        mindarThree = new MindARThree({ container });
+        const { renderer, scene, camera } = mindarThree;
+
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setClearColor(0x000000, 0);
+
+        const faceMesh = mindarThree.addFaceMesh();
+        const texture = await new THREE.TextureLoader().loadAsync('./demon-sukuna-markings.png');
+
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.wrapS = THREE.ClampToEdgeWrapping;
+        texture.wrapT = THREE.ClampToEdgeWrapping;
+        texture.needsUpdate = true;
+
+        faceMesh.material.dispose();
+        faceMesh.material = new THREE.MeshBasicMaterial({
+          map: texture,
+          transparent: true,
+          opacity: 1,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+          toneMapped: false
+        });
+        faceMesh.material.needsUpdate = true;
+        scene.add(faceMesh);
+
+        status.textContent = 'กำลังเปิดกล้อง...';
+        await mindarThree.start();
+        status.textContent = 'หันใบหน้าเข้าหากล้อง';
+
+        renderer.setAnimationLoop(() => {
+          const estimate = mindarThree.getLatestEstimate();
+          status.textContent = estimate ? 'ตรวจพบใบหน้าแล้ว' : 'หันใบหน้าเข้าหากล้อง';
+          renderer.render(scene, camera);
+        });
+      } catch (error) {
+        console.error(error);
+        status.textContent = 'เปิดกล้องหรือโหลดภาพไม่สำเร็จ — ตรวจสอบ Console';
+      }
+    }
+
+    window.addEventListener('resize', () => {
+      if (!mindarThree) return;
+      const { renderer } = mindarThree;
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    });
+
+    start();
+  </script>
+</body>
+</html>
