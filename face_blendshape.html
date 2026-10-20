@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NeoBot Face Blendshape</title>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+        "mindar-face-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-face-three.prod.js"
+      }
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #101827; font-family: system-ui, sans-serif; }
+    #container { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
+    #status { position: absolute; z-index: 10; left: 12px; right: 12px; bottom: 12px; padding: 10px 12px; border-radius: 12px; color: #fff; background: rgba(10,18,32,.72); font-size: 13px; text-align: center; pointer-events: none; }
+    #start { position: absolute; z-index: 20; top: 50%; left: 50%; transform: translate(-50%,-50%); border: 0; border-radius: 999px; padding: 14px 22px; background: #16b8b0; color: #062d35; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 30px #0005; }
+    #start[hidden] { display: none; }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <button id="start">เริ่มใช้งานกล้อง</button>
+    <div id="status">กด “เริ่มใช้งานกล้อง” แล้วอนุญาตให้เข้าถึงกล้อง</div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+    import { MindARThree } from 'mindar-face-three';
+
+    const container = document.querySelector('#container');
+    const startButton = document.querySelector('#start');
+    const statusBox = document.querySelector('#status');
+
+    let mindar;
+    let animationId;
+    let started = false;
+    const meshes = [];
+
+    function setStatus(message) {
+      statusBox.textContent = message;
+    }
+
+    async function startFaceTracking() {
+      if (started) return;
+      started = true;
+      startButton.hidden = true;
+      setStatus('กำลังโหลดโมเดลและเปิดกล้อง…');
+
+      try {
+        mindar = new MindARThree({
+          container,
+          maxTrack: 1,
+          filterMinCF: 0.0001,
+          filterBeta: 0.001
+        });
+
+        const { renderer, scene, camera } = mindar;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+        // แสงสตูดิโอแบบเรียบง่าย
+        const pmremGenerator = new THREE.PMREMGenerator(renderer);
+        const roomEnvironment = new RoomEnvironment();
+        const environmentTarget = pmremGenerator.fromScene(roomEnvironment);
+        scene.environment = environmentTarget.texture;
+        roomEnvironment.dispose();
+        pmremGenerator.dispose();
+        scene.add(new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1.2));
+        const keyLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        keyLight.position.set(0, 2, 3);
+        scene.add(keyLight);
+
+        setStatus('กำลังโหลด my_face.glb…');
+        const gltf = await new GLTFLoader().loadAsync('./my_face.glb');
+        const model = gltf.scene;
+        model.scale.setScalar(1.2);
+        mindar.addAnchor(1).group.add(model);
+
+        model.traverse((object) => {
+          if (object.isMesh && object.morphTargetDictionary && object.morphTargetInfluences) {
+            meshes.push(object);
+          }
+        });
+
+        if (meshes.length === 0) {
+          console.warn('ไม่พบ Morph Targets ใน my_face.glb');
+        } else {
+          console.log('Morph target meshes:', meshes.map(m => ({ name: m.name, targets: m.morphTargetDictionary })));
+        }
+
+        await mindar.start();
+        setStatus('กำลังติดตามใบหน้า — มองเข้ากล้องและขยับสีหน้าได้เลย');
+
+        const animate = () => {
+          animationId = requestAnimationFrame(animate);
+          const categories = mindar.getLatestEstimate()?.blendshapes?.categories ?? [];
+          const scores = Object.create(null);
+          for (const item of categories) scores[item.categoryName] = item.score;
+
+          for (const mesh of meshes) {
+            const dict = mesh.morphTargetDictionary;
+            const influences = mesh.morphTargetInfluences;
+            for (const [name, index] of Object.entries(dict)) {
+              // ชื่อ target ใน my_face.glb ต้องตรงกับชื่อ category ของ MindAR
+              if (Object.prototype.hasOwnProperty.call(scores, name)) {
+                influences[index] = scores[name];
+              }
+            }
+          }
+          renderer.render(scene, camera);
+        };
+        animate();
+
+        window.addEventListener('resize', () => {
+          renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+      } catch (error) {
+        console.error(error);
+        setStatus('เริ่มใช้งานไม่สำเร็จ: ' + (error?.message || error) + ' — ตรวจสอบสิทธิ์กล้องและตำแหน่งไฟล์');
+        startButton.hidden = false;
+        started = false;
+      }
+    }
+
+    startButton.addEventListener('click', startFaceTracking);
+    window.addEventListener('beforeunload', () => {
+      if (animationId) cancelAnimationFrame(animationId);
+      if (mindar) mindar.stop();
+    });
+  </script>
+</body>
+</html>
