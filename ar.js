@@ -10,10 +10,15 @@ function showStatus() {
     : cameraReady ? 'สแกนภาพเดิมได้เลย · แสดงได้พร้อมกันทั้ง 3 ตัว' : 'กำลังเปิดกล้อง · กรุณาอนุญาตการใช้กล้อง';
 }
 AFRAME.registerComponent('character', {
-  schema: {name:{type:'string'},src:{type:'string'},size:{default:1}},
+  schema: {name:{type:'string'},src:{type:'string'},size:{default:1},yaw:{default:0}},
   init() {
     this.tracked=false;this.ready=false;
-    this.rig=new AFRAME.THREE.Group();this.rig.rotation.x=Math.PI/2;
+    this.rig=new AFRAME.THREE.Group();
+    this.parentRotation=new AFRAME.THREE.Quaternion();
+    this.cameraRotation=new AFRAME.THREE.Quaternion();
+    this.facing=new AFRAME.THREE.Group();
+    this.facing.rotation.y=AFRAME.THREE.MathUtils.degToRad(this.data.yaw);
+    this.rig.add(this.facing);
     this.el.setObject3D('character-rig',this.rig);this.rig.visible=false;
     this.model=document.createElement('a-entity');this.el.appendChild(this.model);
     this.onFound=()=>{this.tracked=true;this.rig.visible=this.ready;visibleCharacters.add(this.data.name);showStatus();};
@@ -37,7 +42,7 @@ AFRAME.registerComponent('character', {
           // Animation can modify the imported root, but not this separate group.
           this.normalized=new T.Group();this.normalized.scale.setScalar(factor);
           this.normalized.position.set(-center.x*factor,-box.min.y*factor,-center.z*factor);
-          this.normalized.add(mesh);this.rig.add(this.normalized);
+          this.normalized.add(mesh);this.facing.add(this.normalized);
           mesh.traverse(o=>{if(o.isMesh)o.frustumCulled=false;});
           if(mesh.animations&&mesh.animations.length){
             this.mixer=new T.AnimationMixer(mesh);this.action=this.mixer.clipAction(mesh.animations[0]);
@@ -51,7 +56,19 @@ AFRAME.registerComponent('character', {
       this.model.setAttribute('gltf-model',this.data.src);
     });return this.loadPromise;
   },
-  tick(time,delta){if(this.ready&&this.tracked&&this.mixer&&!document.hidden)this.mixer.update(Math.min(Math.max(delta||0,0)/1000,0.05));},
+  tick(time,delta){
+    if(!this.ready||!this.tracked||document.hidden)return;
+    const camera=this.el.sceneEl.camera;
+    if(camera){
+      // Preserve image position/scale, but cancel marker tilt and roll so the
+      // character stands upright in the camera view, with its front visible.
+      this.el.object3D.updateWorldMatrix(true,false);
+      this.el.object3D.getWorldQuaternion(this.parentRotation);
+      camera.getWorldQuaternion(this.cameraRotation);
+      this.rig.quaternion.copy(this.parentRotation).invert().multiply(this.cameraRotation);
+    }
+    if(this.mixer)this.mixer.update(Math.min(Math.max(delta||0,0)/1000,0.05));
+  },
   remove(){this.el.removeEventListener('targetFound',this.onFound);this.el.removeEventListener('targetLost',this.onLost);if(this.mixer)this.mixer.stopAllAction();this.el.removeObject3D('character-rig');}
 });
 window.addEventListener('DOMContentLoaded',()=>{
