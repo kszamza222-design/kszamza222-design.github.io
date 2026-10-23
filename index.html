@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MindAR — จิรเมธ สายะนันท์ (โอเล่)</title>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+  <style>
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; font-family: system-ui, sans-serif; }
+    .name-card { position: fixed; top: 12px; left: 12px; right: 12px; z-index: 10; padding: 12px 16px; border-radius: 12px; background: rgba(15,23,42,.82); color: white; pointer-events: none; }
+    .name-card strong { display: block; font-size: 16px; }
+    .name-card p { margin: 6px 0 0; font-size: 13px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <div class="name-card">
+    <strong>จิรเมธ สายะนันท์ (โอเล่)</strong>
+    <p>MindAR — สแกนภาพเดิมหรือสองภาพใหม่เพื่อดูวัตถุ AR</p>
+  </div>
+  <a-scene
+    mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 3;"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false">
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+    <!-- ภาพเดิม: targetIndex 0 -->
+    <a-entity mindar-image-target="targetIndex: 0">
+      <!-- กล่องสีฟ้าหมุน: ฐานกล่องอยู่บนระนาบภาพ -->
+      <a-box color="#38BDF8" position="0 0 0.15" scale="0.3 0.3 0.3"
+        animation="property: rotation; to: 0 360 0; dur: 5000; easing: linear; loop: true;">
+      </a-box>
+      <!-- ลูกบอลสีเหลืองข้างกล่อง -->
+      <a-sphere color="#FBBF24" position="0.3 0 0.1" radius="0.1"></a-sphere>
+    </a-entity>
+    <!-- ภาพใหม่ลำดับแรกในไฟล์ที่ส่งมา -->
+    <a-entity mindar-image-target="targetIndex: 1">
+      <a-sphere color="#FBBF24" position="0 0 0.18" radius="0.18"
+        animation="property: position; from: 0 -0.08 0.18; to: 0 0.08 0.18; dur: 1400; dir: alternate; easing: easeInOutSine; loop: true;"></a-sphere>
+      <a-torus color="#F97316" position="0 0 0.18" radius="0.3" radius-tubular="0.025"></a-torus>
+    </a-entity>
+    <!-- ภาพใหม่ลำดับที่สองในไฟล์ที่ส่งมา -->
+    <a-entity mindar-image-target="targetIndex: 2">
+      <a-cone color="#4ADE80" position="0 0 0.2" rotation="90 0 0" radius-bottom="0.2" radius-top="0" height="0.4"
+        animation="property: rotation; from: 90 0 0; to: 90 0 360; dur: 5000; easing: linear; loop: true;"></a-cone>
+    </a-entity>
+  </a-scene>
+</body>
+</html>
